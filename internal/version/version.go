@@ -76,19 +76,9 @@ func install(targetDir, version string) error {
 		return err
 	}
 	goURL := versionArchiveURL(version)
-	res, err := http.Head(goURL)
-	if err != nil {
-		return err
-	}
-	if res.StatusCode == http.StatusNotFound {
-		return fmt.Errorf("no binary release of %v for %v/%v at %v", version, getOS(), runtime.GOARCH, goURL)
-	}
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("server returned %v checking size of %v", http.StatusText(res.StatusCode), goURL)
-	}
 	base := path.Base(goURL)
 	archiveFile := filepath.Join(targetDir, base)
-	if fi, err := os.Stat(archiveFile); err != nil || fi.Size() != res.ContentLength {
+	if _, err := os.Stat(archiveFile); err != nil {
 		if err != nil && !os.IsNotExist(err) {
 			// Something weird. Don't try to download.
 			return err
@@ -96,17 +86,24 @@ func install(targetDir, version string) error {
 		if err := copyFromURL(archiveFile, goURL); err != nil {
 			return fmt.Errorf("error downloading %v: %v", goURL, err)
 		}
-		fi, err = os.Stat(archiveFile)
+		_, err = os.Stat(archiveFile)
 		if err != nil {
 			return err
 		}
-		if fi.Size() != res.ContentLength {
-			return fmt.Errorf("downloaded file %s size %v doesn't match server size %v", archiveFile, fi.Size(), res.ContentLength)
-		}
 	}
-	wantSHA, err := slurpURLToString(goURL + ".sha256")
-	if err != nil {
-		return err
+	var wantSHA string
+	checksumFile := archiveFile + ".sha256"
+	if _, err := os.Stat(checksumFile); err != nil {
+		wantSHA, err = slurpURLToString(goURL + ".sha256")
+		if err != nil {
+			return err
+		}
+	} else {
+		checksum, err := ioutil.ReadFile(checksumFile)
+		if err != nil {
+			return err
+		}
+		wantSHA = string(checksum)
 	}
 	if err := verifySHA256(archiveFile, strings.TrimSpace(wantSHA)); err != nil {
 		return fmt.Errorf("error verifying SHA256 of %v: %v", archiveFile, err)
@@ -118,7 +115,7 @@ func install(targetDir, version string) error {
 	if err := ioutil.WriteFile(filepath.Join(targetDir, unpackedOkay), nil, 0644); err != nil {
 		return err
 	}
-	log.Printf("Success. You may now run '%v'", version)
+	log.Printf("Success. You may now run %q", version)
 	return nil
 }
 
