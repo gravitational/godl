@@ -68,6 +68,7 @@ func Run(version string) {
 // install installs a version of Go to the named target directory, creating the
 // directory as needed.
 func install(targetDir, version string) error {
+	log.Printf("Installing %v in %v.", version, targetDir)
 	if _, err := os.Stat(filepath.Join(targetDir, unpackedOkay)); err == nil {
 		log.Printf("%s: already downloaded in %v", version, targetDir)
 		return nil
@@ -78,11 +79,13 @@ func install(targetDir, version string) error {
 	goURL := versionArchiveURL(version)
 	base := path.Base(goURL)
 	archiveFile := filepath.Join(targetDir, base)
+	log.Printf("Check if the tarball %v is available locally.", archiveFile)
 	if _, err := os.Stat(archiveFile); err != nil {
 		if err != nil && !os.IsNotExist(err) {
 			// Something weird. Don't try to download.
 			return err
 		}
+		log.Printf("Downloading from %v.", goURL)
 		if err := copyFromURL(archiveFile, goURL); err != nil {
 			return fmt.Errorf("error downloading %v: %v", goURL, err)
 		}
