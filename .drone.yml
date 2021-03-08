@@ -1,0 +1,108 @@
+---
+kind: pipeline
+type: exec
+name: build-go-release-tarball
+
+concurrency:
+  limit: 1
+
+platform:
+  os: darwin
+  arch: amd64
+
+trigger:
+  event:
+    - tag
+  ref:
+    include:
+      - refs/tags/v*
+  repo:
+    include:
+      - gravitational/*
+
+workspace:
+  path: /tmp/build-go-release-tarball
+
+clone:
+  disable: true
+
+steps:
+  - name: Set up exec runner storage
+    environment:
+      WORKSPACE_DIR: /tmp/build-go-release-tarball
+    commands:
+      - set -u
+      - mkdir -p $WORKSPACE_DIR
+      - chmod -R u+rw $WORKSPACE_DIR
+      - rm -r $WORKSPACE_DIR/go
+
+  - name: Pull bootstrap Go compiler
+    environment:
+      WORKSPACE_DIR: /tmp/build-go-release-tarball
+      BOOTSTRAP_COMPILER: https://dl.google.com/go/go1.4-bootstrap-20171003.tar.gz
+    commands:
+      - set -u
+      - mkdir -p $WORKSPACE_DIR/go1.4
+      - wget $BOOSTRAP_COMPILER -O $WORKSPACE_DIR/go1.4/go1.4-bootstrap.tar.gz
+      - tar xf go1.4-bootstrap.tar.gz --strip-components=1
+
+  - name: Build bootstrap Go compiler
+    environment:
+      WORKSPACE_DIR: /tmp/build-go-release-tarball/go1.4
+    commands:
+      - set -u
+      - cd $WORKSPACE_DIR
+      - ./make.bash
+
+  - name: Check out code
+    environment:
+      WORKSPACE_DIR: /tmp/build-go-release-tarball/go
+      COMMIT: ${DRONE_TAG:-$DRONE_COMMIT}
+    commands:
+      - set -u
+      - mkdir -p $WORKSPACE_DIR
+      - cd $WORKSPACE_DIR
+      - git clone https://go.googlesource.com/go .
+      - git checkout $COMMIT
+
+  - name: Build Go builder
+    environment:
+      WORKSPACE_DIR: /tmp/build-go-release-tarball/go
+      GOROOT_BOOTSTRAP: /tmp/build-go-release-tarball/go1.4
+    commands:
+      - set -u
+      - cd $WORKSPACE_DIR
+      - ./make.bash
+
+  - name: Build Mac release artifacts
+    environment:
+      WORKSPACE_DIR: /tmp/build-go-release-tarball/go
+      COMMIT: ${DRONE_TAG:-$DRONE_COMMIT}
+    commands:
+      - set -u
+      - cd $WORKSPACE_DIR
+      - tar --exclude=.github --exclude=.git --exclude=.gitignore --exclude=.gitattributes -zcvf ../$COMMIT-darwin-amd64.tar.gz .
+
+  - name: Upload to S3
+    environment:
+      AWS_S3_BUCKET:
+        from_secret: AWS_S3_BUCKET
+      AWS_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      AWS_REGION: us-west-2
+      WORKSPACE_DIR: /tmp/build-go-release-tarball/
+      COMMIT: ${DRONE_TAG:-$DRONE_COMMIT}
+    commands:
+      - set -u
+      - cd $WORKSPACE_DIR/go/artifacts
+      - aws s3 cp $COMMIT-darwin-amd64.tar.gz s3://$AWS_S3_BUCKET/ci/go/
+
+  - name: Clean up exec runner storage (post)
+    environment:
+      WORKSPACE_DIR: /tmp/build-go-release-tarball
+    commands:
+      - set -u
+      - chmod -R u+rw $WORKSPACE_DIR
+      - rm -r $WORKSPACE_DIR/go
