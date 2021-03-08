@@ -34,21 +34,22 @@ steps:
       - set -u
       - mkdir -p $WORKSPACE_DIR
       - chmod -R u+rw $WORKSPACE_DIR
-      - rm -r $WORKSPACE_DIR/go
+      - rm -rf $WORKSPACE_DIR/go $WORKSPACE_DIR/go1.4
 
   - name: Pull bootstrap Go compiler
     environment:
-      WORKSPACE_DIR: /tmp/build-go-release-tarball
+      WORKSPACE_DIR: /tmp/build-go-release-tarball/go1.4
       BOOTSTRAP_COMPILER: https://dl.google.com/go/go1.4-bootstrap-20171003.tar.gz
     commands:
       - set -u
-      - mkdir -p $WORKSPACE_DIR/go1.4
-      - wget $BOOSTRAP_COMPILER -O $WORKSPACE_DIR/go1.4/go1.4-bootstrap.tar.gz
-      - tar xf go1.4-bootstrap.tar.gz --strip-components=1
+      - mkdir -p $WORKSPACE_DIR
+      - cd $WORKSPACE_DIR
+      - curl $BOOSTRAP_COMPILER -O
+      - tar xf ./go1.4-bootstrap-20171003.tar.gz --strip-components=1
 
   - name: Build bootstrap Go compiler
     environment:
-      WORKSPACE_DIR: /tmp/build-go-release-tarball/go1.4
+      WORKSPACE_DIR: /tmp/build-go-release-tarball/go1.4/src
     commands:
       - set -u
       - cd $WORKSPACE_DIR
@@ -67,7 +68,7 @@ steps:
 
   - name: Build Go builder
     environment:
-      WORKSPACE_DIR: /tmp/build-go-release-tarball/go
+      WORKSPACE_DIR: /tmp/build-go-release-tarball/go/src
       GOROOT_BOOTSTRAP: /tmp/build-go-release-tarball/go1.4
     commands:
       - set -u
@@ -81,7 +82,7 @@ steps:
     commands:
       - set -u
       - cd $WORKSPACE_DIR
-      - tar --exclude=.github --exclude=.git --exclude=.gitignore --exclude=.gitattributes -zcvf ../$COMMIT-darwin-amd64.tar.gz .
+      - tar --exclude=.github --exclude=.git --exclude=.gitignore --exclude=.gitattributes -zcf ../$COMMIT-darwin-amd64.tar.gz *
 
   - name: Upload to S3
     environment:
@@ -96,7 +97,6 @@ steps:
       COMMIT: ${DRONE_TAG:-$DRONE_COMMIT}
     commands:
       - set -u
-      - cd $WORKSPACE_DIR/go/artifacts
       - aws s3 cp $COMMIT-darwin-amd64.tar.gz s3://$AWS_S3_BUCKET/ci/go/
 
   - name: Clean up exec runner storage (post)
@@ -105,4 +105,4 @@ steps:
     commands:
       - set -u
       - chmod -R u+rw $WORKSPACE_DIR
-      - rm -r $WORKSPACE_DIR/go
+      - rm -rf $WORKSPACE_DIR/go $WORKSPACE_DIR/go1.4
