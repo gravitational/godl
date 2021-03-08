@@ -44,7 +44,7 @@ steps:
       - set -u
       - mkdir -p $WORKSPACE_DIR
       - cd $WORKSPACE_DIR
-      - curl $BOOSTRAP_COMPILER -O
+      - curl $BOOTSTRAP_COMPILER -O
       - tar xf ./go1.4-bootstrap-20171003.tar.gz --strip-components=1
 
   - name: Build bootstrap Go compiler
@@ -58,13 +58,12 @@ steps:
   - name: Check out code
     environment:
       WORKSPACE_DIR: /tmp/build-go-release-tarball/go
-      COMMIT: ${DRONE_TAG:-$DRONE_COMMIT}
     commands:
       - set -u
       - mkdir -p $WORKSPACE_DIR
       - cd $WORKSPACE_DIR
       - git clone https://go.googlesource.com/go .
-      - git checkout $COMMIT
+      - git checkout ${DRONE_TAG:-$DRONE_COMMIT}
 
   - name: Build Go builder
     environment:
@@ -78,11 +77,10 @@ steps:
   - name: Build Mac release artifacts
     environment:
       WORKSPACE_DIR: /tmp/build-go-release-tarball/go
-      COMMIT: ${DRONE_TAG:-$DRONE_COMMIT}
     commands:
       - set -u
       - cd $WORKSPACE_DIR
-      - tar --exclude=.github --exclude=.git --exclude=.gitignore --exclude=.gitattributes -zcf ../$COMMIT-darwin-amd64.tar.gz *
+      - tar --exclude=.github --exclude=.git --exclude=.gitignore --exclude=.gitattributes -zcf ../${DRONE_TAG:-$DRONE_COMMIT}-darwin-amd64.tar.gz *
 
   - name: Upload to S3
     environment:
@@ -94,10 +92,9 @@ steps:
         from_secret: AWS_SECRET_ACCESS_KEY
       AWS_REGION: us-west-2
       WORKSPACE_DIR: /tmp/build-go-release-tarball/
-      COMMIT: ${DRONE_TAG:-$DRONE_COMMIT}
     commands:
       - set -u
-      - aws s3 cp $COMMIT-darwin-amd64.tar.gz s3://$AWS_S3_BUCKET/ci/go/
+      - aws s3 cp ${DRONE_TAG:-$DRONE_COMMIT}-darwin-amd64.tar.gz s3://$AWS_S3_BUCKET/ci/go/
 
   - name: Clean up exec runner storage (post)
     environment:
