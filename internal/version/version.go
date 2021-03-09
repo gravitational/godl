@@ -379,7 +379,7 @@ func versionArchiveURL(version string) string {
 	if goos == "linux" && runtime.GOARCH == "arm" {
 		arch = "armv6l"
 	}
-	return "https://s3.amazonaws.com/builds.gravitational.io/ci/go/" + version + "-" + goos + "-" + arch + ext
+	return "https://s3.amazonaws.com/dronestorage.gravitational.io/ci/go/" + version + "-" + goos + "-" + arch + ext
 }
 
 const caseInsensitiveEnv = runtime.GOOS == "windows"

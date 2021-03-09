@@ -15,7 +15,7 @@ trigger:
     - tag
   ref:
     include:
-      - refs/tags/v*
+      - refs/tags/*
   repo:
     include:
       - gravitational/*
