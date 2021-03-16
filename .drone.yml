@@ -102,10 +102,9 @@ steps:
       WORKSPACE_DIR: /tmp/build-go-release-tarball
     commands:
       - set -u
-      - chmod -R u+rw $WORKSPACE_DIR
       - rm -rf $WORKSPACE_DIR/go $WORKSPACE_DIR/go1.4
 ---
 kind: signature
-hmac: 13c3fb412a661e7fc453f649e49ed63871330e3a083c772e1cbc4cf1a06819ce
+hmac: 54ef085e23df1ec5a3c335a58956dcbe3b5b128de4c83cec3a0b9572a2a32c2f
 
 ...
