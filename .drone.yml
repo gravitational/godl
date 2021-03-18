@@ -81,6 +81,7 @@ steps:
       - set -u
       - cd $WORKSPACE_DIR
       - tar --exclude=.github --exclude=.git --exclude=.gitignore --exclude=.gitattributes -zcf ../${DRONE_TAG:-$DRONE_COMMIT}-darwin-amd64.tar.gz *
+      - shasum --algorithm 256 ../${DRONE_TAG:-$DRONE_COMMIT}-darwin-amd64.tar.gz | cut -d" " -f 1 | tee ../${DRONE_TAG:-$DRONE_COMMIT}-darwin-amd64.tar.gz.sha256
 
   - name: Upload to S3
     environment:
@@ -96,6 +97,7 @@ steps:
       - set -u
       - cd $WORKSPACE_DIR
       - aws s3 cp ./${DRONE_TAG:-$DRONE_COMMIT}-darwin-amd64.tar.gz s3://$AWS_S3_BUCKET/ci/go/
+      - aws s3 cp ./${DRONE_TAG:-$DRONE_COMMIT}-darwin-amd64.tar.gz.sha256 s3://$AWS_S3_BUCKET/ci/go/
 
   - name: Clean up exec runner storage (post)
     environment:
@@ -105,6 +107,6 @@ steps:
       - rm -rf $WORKSPACE_DIR/go $WORKSPACE_DIR/go1.4
 ---
 kind: signature
-hmac: 54ef085e23df1ec5a3c335a58956dcbe3b5b128de4c83cec3a0b9572a2a32c2f
+hmac: ad030daba763cac2c62a0be2bf430aba6030b0ac6ffb6f65f9ac294ce9761975
 
 ...
